@@ -1,21 +1,47 @@
-# Variables locales (constantes calculées)
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
+    }
+  }
+}
+
+provider "docker" {
+  host = "unix:///var/run/docker.sock"
+}
+
+# --- 1. Variables Locales & Workspace ---
 locals {
-  project   = "devops-local-lab"
-  env       = "dev"
+  project = "devops-local-lab"
+  
+  # Gestion intelligente du workspace :
+  # Si on est dans "default", on force "dev". Sinon, on prend le nom du workspace (dev, prod).
+  env = terraform.workspace == "default" ? "dev" : terraform.workspace
+  
+  # Nom de l'image de ton app (doit exister localement ou sur un registry)
   app_image = "${local.project}-flask:latest"
 }
 
-# 1. Réseau Docker isolé
-resource "docker_network" "devops_net" {
-  name = "${var.project_name}${local.env_suffix}-net"
+# --- 2. Réseau ---
+# J'ai remis le nom "app_net" pour correspondre à ton appel plus bas
+resource "docker_network" "app_net" {
+  name = "${local.project}-${local.env}-net"
 }
 
-# 2. Conteneur Flask (Application)
+# --- 3. Conteneur Flask (App) ---
 resource "docker_container" "flask_app" {
-  name  = "${var.project_name}-app${local.env_suffix}"
-  image = docker_image.app.image_id
+  name  = "${local.project}-${local.env}-app"
+  
+  # CORRECTION : On utilise la variable locale, pas une ressource "docker_image" qui n'existe pas
+  image = local.app_image
 
   networks_advanced {
+    # CORRECTION : On référence bien "app_net" défini plus haut
     name = docker_network.app_net.name
   }
 
@@ -32,12 +58,12 @@ resource "docker_container" "flask_app" {
   restart = "unless-stopped"
 }
 
-# 3. Image Nginx (on pull l'image officielle)
+# --- 4. Image Nginx ---
 resource "docker_image" "nginx" {
   name = "nginx:1.27-alpine"
 }
 
-# 4. Fichier de configuration Nginx (généré dynamiquement)
+# --- 5. Config Nginx ---
 resource "local_file" "nginx_conf" {
   filename = "${path.module}/generated/nginx.conf"
 
@@ -59,31 +85,27 @@ resource "local_file" "nginx_conf" {
   file_permission = "0644"
 }
 
-# 5. Conteneur Nginx (Reverse Proxy)
+# --- 6. Conteneur Nginx ---
 resource "docker_container" "nginx" {
-  name  = "${var.project_name}-nginx${local.env_suffix}"
-  image = docker_image.nginx.image_id
+  name  = "${local.project}-${local.env}-nginx"
+  image = docker_image.nginx.name
+
+  networks_advanced {
+    name = docker_network.app_net.name
+  }
 
   ports {
     internal = 80
-    external = local.nginx_port  # 👈 Port dynamique selon l'environnement
+    # Petite astuce : si env=prod port 80, si env=dev port 8080
+    external = local.env == "prod" ? 80 : 8080
   }
 
-  networks_advanced {
-    name = docker_network.devops_net.name
+  volumes {
+    host_path      = abspath(local_file.nginx_conf.filename)
+    container_path = "/etc/nginx/conf.d/default.conf"
+    read_only      = true
   }
 
-  # Configuration Nginx minimale pour test
-  upload {
-    content = <<-EOF
-      server {
-        listen 80;
-        location /health {
-          return 200 '{"status":"ok"}';
-          add_header Content-Type application/json;
-        }
-      }
-    EOF
-    file    = "/etc/nginx/conf.d/default.conf"
-  }
+  restart    = "unless-stopped"
+  depends_on = [local_file.nginx_conf, docker_container.flask_app]
 }
