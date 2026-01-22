@@ -12,7 +12,7 @@ resource "docker_image" "flask_app" {
 resource "docker_container" "app" {
   image = docker_image.flask_app.image_id
   name  = "devops-lab-flask-container"
-  
+
   ports {
     internal = 5000
     external = 8080 # This satisfies the curl localhost:8080 requirement
