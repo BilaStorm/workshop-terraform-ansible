@@ -1,60 +1,62 @@
 # 5. Terraform → Ansible : Inventaire Dynamique
 
-**Objectif** : Connecter l'IaC (Terraform) à la Gestion de Config (Ansible) en générant automatiquement le fichier d'inventaire.
+**Objectif** : Créer `outputs.tf` et générer automatiquement le fichier `inventory.ini` d'Ansible depuis Terraform.
 
 ## Contexte
 
-Pour qu'Ansible puisse configurer nos serveurs, il doit connaître leurs adresses IP. Dans un monde dynamique (Cloud/Docker), ces IP changent. Terraform connaît ces infos après le déploiement.
+Vous allez **connecter Terraform et Ansible** en automatisant la génération de l'inventaire :
+- Terraform connaît les IPs/ports après le déploiement
+- Il génère automatiquement `infra/ansible/inventory.ini`
+- Ansible peut immédiatement l'utiliser
 
-Nous allons utiliser un **Output** Terraform et un template pour générer `inventory.ini`.
+## Vue d'ensemble
 
-## Instructions
+Fichiers à créer :
+1. **`outputs.tf`** (nouveau) : Expose les valeurs importantes (ports, noms de conteneurs)
+2. **`ansible/ansible.cfg`** (nouveau) : Configuration Ansible de base
+3. Modification de **`main.tf`** : Ajouter une ressource `local_file` pour générer l'inventory
 
-### 1. Déployer l'infrastructure
+## Instructions détaillées
 
-Si ce n'est pas fait (depuis l'étape précédente), assurez-vous d'avoir une infra qui tourne (workspace `dev` recommandé).
+Suivez l'[exercice détaillé Ex03](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex03-terraform-ansible-generer-inventory-ini-automatiquement/enonce.md) qui explique :
+
+1. **Création de `outputs.tf`** : Définir les outputs (environment, nginx_port, network_name)
+2. **Création de `ansible.cfg`** : Configuration de base Ansible
+3. **Ajout de `local_file`** dans `main.tf` : Génération automatique de `inventory.ini`
+
+## Instructions rapides
+
+### 1. Créer outputs.tf
+
+Créez `infra/terraform/outputs.tf` avec des outputs pour exposer :
+- `environment` (workspace actif)
+- `nginx_port` (port calculé)
+- `docker_network_name`
+- `nginx_container_name`
+
+### 2. Créer ansible.cfg
+
+Créez `infra/ansible/ansible.cfg` avec la configuration de base.
+
+### 3. Ajouter local_file dans main.tf
+
+Ajoutez une ressource `local_file` qui génère `../ansible/inventory.ini` avec le format INI approprié.
+
+### 4. Appliquer et vérifier
 
 ```bash
 cd infra/terraform
-terraform workspace select dev
-terraform apply -auto-approve
+terraform apply
+cat ../ansible/inventory.ini  # Fichier généré automatiquement !
 ```
 
-### 2. Vérifier la génération
-
-Terraform a été configuré (via `local_file` ou `template_file` dans le code existant) pour créer un fichier `infra/ansible/inventory.ini`.
-
-Vérifiez son contenu :
-
-```bash
-cat ../ansible/inventory.ini
-```
-
-Il doit ressembler à ceci :
-```ini
-[vm]
-127.0.0.1 ansible_port=2222 ansible_user=ansible ansible_password=ansible ansible_become=true
-```
-*(L'IP et le port dépendent de votre mapping Docker).*
-
-### 3. Tester la connectivité Ansible
-
-Maintenant qu'Ansible sait où taper, testons la connexion SSH.
-Cette "VM" simulée est en fait un conteneur Docker avec un serveur SSH.
+### 5. Valider l'inventory
 
 ```bash
 cd ../ansible
-ansible -i inventory.ini vm -m ping
+ansible-inventory -i inventory.ini --list
 ```
 
-**Succès attendu** :
-```json
-127.0.0.1 | SUCCESS => {
-    "changed": false,
-    "ping": "pong"
-}
-```
+Cette commande parse l'inventory et affiche sa structure en JSON.
 
-> **Troubleshooting** : Si le ping échoue avec "Connection refused", vérifiez que le conteneur SSH tourne (`docker ps`) et que le port 2222 est bien mappé.
-
-> 📚 **Pour aller plus loin** : Consultez l'[exercice détaillé Ex03](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex03-terraform-ansible-generer-inventory-ini-automatiquement) pour comprendre la génération dynamique d'inventory.
+> 📚 **Pour aller plus loin** : Consultez l'[exercice détaillé Ex03](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex03-terraform-ansible-generer-inventory-ini-automatiquement/enonce.md) pour comprendre la génération dynamique d'inventory.

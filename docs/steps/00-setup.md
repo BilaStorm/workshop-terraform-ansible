@@ -35,7 +35,7 @@ Vous devez avoir installé sur votre machine :
 2. Vérifiez la structure :
    ```bash
    ls -F
-   # Devrait afficher : app/  docs/  exercises/  infra/  Makefile ...
+   # Devrait afficher : app/  docs/  exercises/  infra/  infra-  Makefile ...
    ```
 
 3. Testez votre environnement Docker :
@@ -43,6 +43,15 @@ Vous devez avoir installé sur votre machine :
    docker run --rm hello-world
    ```
    *Vous devez voir un message de succès.*
+
+## Organisation des dossiers
+
+Ce workshop utilise une approche **"from scratch"** :
+
+- **`infra/`** : Votre espace de travail (vide au départ). C'est ici que vous créerez vos fichiers Terraform et Ansible au fil des exercices.
+- **`exercises/`** : Énoncés détaillés avec explications ligne par ligne.
+
+**Philosophie** : Vous allez **créer chaque fichier vous-même** en comprenant chaque ligne, plutôt que d'exécuter des commandes sur des fichiers pré-faits.
 
 ## Nettoyage préventif
 

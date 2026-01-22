@@ -119,33 +119,51 @@ make --version && docker --version && terraform -version && ansible --version
 
 ## 🚀 Le Parcours Pédagogique
 
-Chaque dossier dans `exercises/` est une étape vers la maîtrise.
+> **Approche "From Scratch"** : Vous **créez chaque fichier** Terraform et Ansible progressivement, avec explications ligne par ligne. Fini les fichiers pré-faits où on fait juste tourner des commandes !
+
+### 🏗️ Organisation des dossiers
+- **`infra/`** : Votre espace de travail (vide au départ) — C'est ici que vous construirez votre infrastructure
+- **`exercises/`** : Énoncés détaillés avec explications pédagogiques
 
 ### Phase 1 : Les Fondations (Terraform)
 *   **[Ex01 : Hello Infra](exercises/ex01-terraform-hello-infra-plan-apply-destroy/)**
-    *   *Objectif* : Lancer votre premier conteneur Nginx via Terraform.
-    *   *Commandes* : `terraform init`, `plan`, `apply`, `destroy`.
+    *   *Ce que vous créez* : `versions.tf`, `providers.tf`, `main.tf`
+    *   *Objectif* : Créer votre première infrastructure Terraform from scratch
+    *   *Compétences* : init, plan, apply, destroy, ressources Docker
+    *   *Durée* : ~30 min
 *   **[Ex02 : Variables & Environnements](exercises/ex02-terraform-variables-workspaces-dev-prod/)**
-    *   *Objectif* : Gérer un environnement "DEV" et "PROD" avec le même code.
-    *   *Notions* : `variables.tf`, `terraform.tfvars`, Workspaces.
+    *   *Ce que vous créez* : `variables.tf`, refactoring de `main.tf` avec locals
+    *   *Objectif* : Gérer plusieurs environnements (dev/prod) avec le même code
+    *   *Compétences* : Variables, locals, workspaces, multi-environnements
+    *   *Durée* : ~25 min
 
 ### Phase 2 : L'Intégration (Terraform 🤝 Ansible)
 *   **[Ex03 : Inventaire Dynamique](exercises/ex03-terraform-ansible-generer-inventory-ini-automatiquement/)**
-    *   *Objectif* : Ne plus jamais écrire d'adresses IP à la main.
-    *   *Notions* : `resource "local_file"`, Template Strings, Outputs.
+    *   *Ce que vous créez* : `outputs.tf`, `ansible/ansible.cfg`, génération auto de `inventory.ini`
+    *   *Objectif* : Ne plus jamais écrire d'adresses IP à la main
+    *   *Compétences* : Outputs, `resource "local_file"`, Templates, pipeline Terraform→Ansible
+    *   *Durée* : ~20 min
 
 ### Phase 3 : Configuration Avancée (Ansible)
 *   **[Ex04 : Bootstrap & Déploiement](exercises/ex04-ansible-bootstrap-docker-deploiement-app-idempotence/)**
-    *   *Objectif* : Installer Docker DANS un conteneur et y déployer l'app.
-    *   *Notions* : Rôles, `community.docker`, Idempotence.
+    *   *Ce que vous créez* : 3 rôles Ansible (`bootstrap`, `docker`, `app`), playbook `site.yml`
+    *   *Objectif* : Installer Docker et déployer l'application de manière idempotente
+    *   *Compétences* : Rôles, modules, handlers, idempotence, `community.docker`
+    *   *Durée* : ~35 min
 *   **[Ex05 : Handlers & Proxy](exercises/ex05-ansible-nginx-reverse-proxy-handlers/)**
-    *   *Objectif* : Configurer un Reverse Proxy qui se recharge uniquement quand la config change.
-    *   *Notions* : Jinja2 Templates, Handlers (`notify`), Services.
+    *   *Ce que vous créez* : Rôle `nginx` avec tasks, templates Jinja2, handlers
+    *   *Objectif* : Configurer un reverse proxy qui se recharge uniquement si la config change
+    *   *Compétences* : Templates Jinja2, Handlers (`notify`), reload vs restart
+    *   *Durée* : ~25 min
 
 ### Phase 4 : Industrialisation
 *   **[Ex06 : CI/CD Local](exercises/ex06-chainage-makefile-mini-ci-cd-local/)**
-    *   *Objectif* : "One Button Deployment".
-    *   *Notions* : `Makefile`, dépendances de tâches, automatisation.
+    *   *Ce que vous créez* : `Makefile` complet avec 10+ targets
+    *   *Objectif* : "One Button Deployment" — Automatiser tout le pipeline
+    *   *Compétences* : Make, orchestration, variables, dépendances, CI/CD
+    *   *Durée* : ~20 min
+
+**Durée totale** : ~2h55 (vs ~2h00 avec fichiers pré-faits) — **Gain de compréhension : 10x** 🚀
 
 ---
 

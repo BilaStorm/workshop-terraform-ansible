@@ -7,75 +7,68 @@
 - À insister : `plan` avant `apply`
 <!-- INSTRUCTOR:END -->
 
-**Objectif** : Gérer plusieurs environnements (Dev et Prod) avec le même code Terraform.
+**Objectif** : Créer le fichier `variables.tf` et utiliser les **workspaces** pour gérer plusieurs environnements (Dev et Prod).
 
 ## Contexte
 
-Nous voulons simuler deux environnements distincts :
-- **dev** : Accessible sur le port `8080`.
-- **prod** : Accessible sur le port `80` (standard HTTP).
+Vous allez rendre votre infrastructure **multi-environnements** :
+- **dev** : Nginx sur port `8080`
+- **prod** : Nginx sur port `80`
 
-Au lieu de dupliquer les fichiers `.tf`, nous utiliserons les **Terraform Workspaces**.
+Pour cela, vous créerez un nouveau fichier `variables.tf` et ajouterez des **locals** dans `main.tf` pour calculer les ports dynamiquement.
 
-## Instructions
+## Vue d'ensemble
 
-### 1. Création des workspaces
+Fichiers à créer/modifier :
+1. **`variables.tf`** (nouveau) : Déclare les variables d'entrée
+2. **`main.tf`** (modifier) : Ajouter un bloc `locals` et utiliser `local.nginx_port`
 
-Par défaut, vous êtes dans le workspace `default`. Créons-en d'autres :
+## Instructions détaillées
+
+Suivez l'[exercice détaillé Ex02](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex02-terraform-variables-workspaces-dev-prod/enonce.md) qui vous guide dans :
+
+1. **Création de `variables.tf`** avec explication de chaque attribut (`description`, `type`, `default`)
+2. **Ajout des locals** dans `main.tf` pour gérer les ports par workspace
+3. **Modification des ressources** pour utiliser `${local.env_suffix}` et `local.nginx_port`
+
+## Instructions rapides
+
+### 1. Créer variables.tf
+
+Créez `infra/terraform/variables.tf` avec les variables `project_name`, `app_image`, `app_version`.
+
+### 2. Ajouter locals dans main.tf
+
+Ajoutez un bloc `locals` qui :
+- Récupère le workspace actif : `env = terraform.workspace`
+- Définit une map de ports : `ports = { dev = 8080, prod = 80 }`
+- Calcule le port : `nginx_port = local.ports[local.env]`
+
+### 3. Créer les workspaces
 
 ```bash
 cd infra/terraform
-
-# Créer l'environnement de dev
 terraform workspace new dev
-
-# Créer l'environnement de prod
 terraform workspace new prod
 ```
 
-### 2. Lister et basculer
-
-Pour voir où vous êtes :
-```bash
-terraform workspace list
-terraform workspace show
-```
-
-Pour changer d'environnement :
-```bash
-terraform workspace select dev
-```
-
-### 3. Application en Dev
-
-Assurez-vous d'être sur `dev` et déployez :
+### 4. Déployer dev
 
 ```bash
 terraform workspace select dev
-terraform apply -auto-approve
-```
-
-> **Note** : Terraform utilise le nom du workspace pour suffixer les ressources ou choisir les variables (selon la configuration dans `main.tf` ou `variables.tf`).
-
-Testez l'accès **Dev** :
-```bash
+terraform apply
 curl http://localhost:8080/health
 ```
 
-### 4. Application en Prod
-
-Basculez sur prod et déployez :
+### 5. Déployer prod (en parallèle)
 
 ```bash
 terraform workspace select prod
-terraform apply -auto-approve
-```
-
-Testez l'accès **Prod** :
-```bash
+terraform apply
 curl http://localhost:80/health
 ```
-*(Si le port 80 est protégé ou pris sur votre machine, cela peut échouer. Dans ce lab, nous assumons que le 80 est libre ou mappé différemment selon votre configuration `variables.tf`).*
+
+Les deux environnements coexistent avec 4 conteneurs au total (2 dev + 2 prod).
 
 ***
 
@@ -83,5 +76,5 @@ curl http://localhost:80/health
 - Chaque workspace a son propre fichier d'état (`terraform.tfstate.d/<workspace>/`).
 - Une mauvaise gestion des workspaces peut écraser la prod avec une conf de dev si on ne fait pas attention au `select`.
 
-> 📚 **Pour aller plus loin** : Consultez l'[exercice détaillé Ex02](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex02-terraform-variables-workspaces-dev-prod) avec exemples de code HCL complets.
+> 📚 **Pour aller plus loin** : Consultez l'[exercice détaillé Ex02](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex02-terraform-variables-workspaces-dev-prod/enonce.md) avec exemples de code HCL complets.
 

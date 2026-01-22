@@ -1,49 +1,70 @@
 # 7. Ansible : Nginx & Handlers
 
-**Objectif** : Configurer un Reverse Proxy Nginx devant notre application et maîtriser les handlers Ansible.
+**Objectif** : Créer le rôle Ansible `nginx` pour configurer un reverse proxy et maîtriser les **handlers**.
 
 ## Contexte
 
-Plutôt que d'exposer l'application Flask directement, nous mettons Nginx devant.
-Si nous changeons la configuration Nginx, le service doit redémarrer. Si nous ne changeons rien, il ne doit pas redémarrer inutilement. C'est le rôle des **Handlers**.
+Vous allez créer un nouveau rôle qui :
+- Installe Nginx
+- Déploie une configuration custom via template Jinja2
+- Utilise un **handler** pour reload Nginx uniquement si la config change
 
-## Instructions
+## Concept : Handlers
 
-### 1. Le Rôle Nginx
+Un **handler** est une tâche spéciale qui s'exécute **uniquement si déclenchée** par `notify` :
+- Si config change → `notify: Reload Nginx` → Handler exécuté en fin de playbook
+- Si config identique → Handler **ignoré**
 
-Le rôle `infra/ansible/roles/nginx` déploie :
-- Le paquet/conteneur Nginx.
-- Le fichier de configuration `default.conf` via un template Jinja2.
+Cela évite les redémarrages inutiles et respecte l'idempotence.
 
-### 2. Déployer (si ce n'est pas déjà inclus dans site.yml)
+## Vue d'ensemble
 
-Dans ce lab, le rôle nginx est généralement inclus dans `site.yml`. Assurez-vous qu'il est activé.
+Fichiers à créer :
+1. **`roles/nginx/tasks/main.yml`** : Installation + déploiement config
+2. **`roles/nginx/templates/default.conf.j2`** : Configuration Nginx pour reverse proxy
+3. **`roles/nginx/handlers/main.yml`** : Handler pour reload Nginx
+4. Modifier **`site.yml`** : Ajouter le rôle nginx
+
+## Instructions détaillées
+
+Suivez l'[exercice détaillé Ex05](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex05-ansible-nginx-reverse-proxy-handlers/enonce.md) qui explique :
+
+1. **Création du rôle nginx** avec tâches d'installation
+2. **Template Nginx** : Configuration reverse proxy avec headers (X-Real-IP, X-Forwarded-For)
+3. **Handlers** : Différence entre `reload` (graceful) et `restart`
+4. **Test d'idempotence** : Vérifier que le handler ne s'exécute que si nécessaire
+
+## Instructions rapides
+
+### 1. Créer la structure
 
 ```bash
 cd infra/ansible
-ansible-playbook -i inventory.ini site.yml
+mkdir -p roles/nginx/{tasks,templates,handlers}
 ```
-*(Si vous l'avez déjà lancé à l'étape précédente, Ansible va vérifier la config Nginx).*
 
-### 3. Tester le Handler
+### 2. Créer les fichiers
 
-Pour voir le handler en action ("restart nginx"), modifions artificiellement la configuration ou simulons un changement.
+- `roles/nginx/tasks/main.yml` : Installer nginx, déployer config, supprimer page par défaut
+- `roles/nginx/templates/default.conf.j2` : Config reverse proxy vers `flask_app:5000`
+- `roles/nginx/handlers/main.yml` : Handler "Reload Nginx" et "Restart Nginx"
 
-Ou, plus simple, observez la première exécution :
-- Si la config change (`template: default.conf.j2`), Ansible notifie le handler.
-- À la fin du play, le handler s'exécute : `RUNNING HANDLER [nginx : restart nginx]`.
+### 3. Ajouter nginx au playbook
 
-Si vous relancez le playbook sans rien changer, le handler ne s'exécute pas.
+Modifiez `site.yml` pour inclure le rôle nginx après `app`.
 
-### 4. Vérification du Service
-
-L'accès à l'application doit fonctionner à travers Nginx.
-Selon votre map de ports Terraform :
+### 4. Exécuter et tester
 
 ```bash
-curl http://localhost:8080
+ansible-playbook -i inventory.ini site.yml --tags nginx
+curl http://localhost:80/health  # Via Nginx
 ```
-(Ou le port défini pour le load balancer/proxy).
 
-> 📚 **Pour aller plus loin** : Consultez l'[exercice détaillé Ex05](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex05-ansible-nginx-reverse-proxy-handlers) pour maîtriser les handlers et templates Jinja2.
+### 5. Vérifier l'idempotence du handler
+
+Relancez le playbook : le handler ne doit **pas** s'exécuter.
+
+Modifiez le template (ajoutez un commentaire), relancez : le handler **doit** s'exécuter.
+
+> 📚 **Pour aller plus loin** : Consultez l'[exercice détaillé Ex05](https://github.com/othila-academy/workshop-terraform-ansible/tree/main/exercises/ex05-ansible-nginx-reverse-proxy-handlers/enonce.md) pour maîtriser les handlers et templates Jinja2.
 
