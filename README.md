@@ -119,15 +119,20 @@ make --version && docker --version && terraform -version && ansible --version
 
 ## 🚀 Le Parcours Pédagogique
 
-Chaque dossier dans `exercises/` est une étape vers la maîtrise.
+> Vous **créez** chaque fichier Terraform et Ansible progressivement, avec explications détaillées.
+
+### 🏗️ Workspace de travail
+- **`infra/`** : Votre espace de travail (initialement vide)
 
 ### Phase 1 : Les Fondations (Terraform)
 *   **[Ex01 : Hello Infra](exercises/ex01-terraform-hello-infra-plan-apply-destroy/)**
-    *   *Objectif* : Lancer votre premier conteneur Nginx via Terraform.
-    *   *Commandes* : `terraform init`, `plan`, `apply`, `destroy`.
+    *   *Ce que vous créez* : `versions.tf`, `providers.tf`, `main.tf`
+    *   *Objectif* : Créer votre première infrastructure Terraform from scratch
+    *   *Compétences* : init, plan, apply, destroy, ressources Docker
 *   **[Ex02 : Variables & Environnements](exercises/ex02-terraform-variables-workspaces-dev-prod/)**
-    *   *Objectif* : Gérer un environnement "DEV" et "PROD" avec le même code.
-    *   *Notions* : `variables.tf`, `terraform.tfvars`, Workspaces.
+    *   *Ce que vous créez* : `variables.tf`, refactoring de `main.tf`
+    *   *Objectif* : Gérer plusieurs environnements (dev/prod) avec le même code
+    *   *Compétences* : Variables, locals, workspaces
 
 ### Phase 2 : L'Intégration (Terraform 🤝 Ansible)
 *   **[Ex03 : Inventaire Dynamique](exercises/ex03-terraform-ansible-generer-inventory-ini-automatiquement/)**
