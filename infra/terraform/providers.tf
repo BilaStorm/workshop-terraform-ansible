@@ -1,3 +1,3 @@
 provider "docker" {
-  host = "tcp://localhost:2375"
+  host = "tcp://host.docker.internal:2375"
 }
