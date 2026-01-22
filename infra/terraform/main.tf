@@ -1,47 +1,28 @@
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.0"
-    }
-  }
-}
-
-provider "docker" {
-  host = "unix:///var/run/docker.sock"
-}
-
-# --- 1. Variables Locales & Workspace ---
+# --- 1. Variables Locales & Logique ---
 locals {
-  project = "devops-local-lab"
+  # On récupère le nom de base depuis variables.tf
+  # Assure-toi que 'variable "project_name" {}' existe bien dans variables.tf
+  project = var.project_name
   
   # Gestion intelligente du workspace :
-  # Si on est dans "default", on force "dev". Sinon, on prend le nom du workspace (dev, prod).
+  # Si on est dans "default", on force "dev". Sinon, on prend le nom (dev, prod).
   env = terraform.workspace == "default" ? "dev" : terraform.workspace
   
-  # Nom de l'image de ton app (doit exister localement ou sur un registry)
+  # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
 }
 
-# --- 2. Réseau ---
-# J'ai remis le nom "app_net" pour correspondre à ton appel plus bas
+# --- 2. Réseau Docker ---
 resource "docker_network" "app_net" {
   name = "${local.project}-${local.env}-net"
 }
 
-# --- 3. Conteneur Flask (App) ---
+# --- 3. Conteneur Flask (Application) ---
 resource "docker_container" "flask_app" {
   name  = "${local.project}-${local.env}-app"
-  
-  # CORRECTION : On utilise la variable locale, pas une ressource "docker_image" qui n'existe pas
   image = local.app_image
 
   networks_advanced {
-    # CORRECTION : On référence bien "app_net" défini plus haut
     name = docker_network.app_net.name
   }
 
@@ -58,12 +39,12 @@ resource "docker_container" "flask_app" {
   restart = "unless-stopped"
 }
 
-# --- 4. Image Nginx ---
+# --- 4. Image Nginx (Reverse Proxy) ---
 resource "docker_image" "nginx" {
   name = "nginx:1.27-alpine"
 }
 
-# --- 5. Config Nginx ---
+# --- 5. Fichier de Configuration Nginx ---
 resource "local_file" "nginx_conf" {
   filename = "${path.module}/generated/nginx.conf"
 
@@ -96,7 +77,7 @@ resource "docker_container" "nginx" {
 
   ports {
     internal = 80
-    # Petite astuce : si env=prod port 80, si env=dev port 8080
+    # Logique : Port 80 en prod, 8080 en dev
     external = local.env == "prod" ? 80 : 8080
   }
 
