@@ -6,14 +6,14 @@ locals {
 }
 
 # 1. Réseau Docker isolé
-resource "docker_network" "app_net" {
-  name = "${local.project}-${local.env}-net"
+resource "docker_network" "devops_net" {
+  name = "${var.project_name}${local.env_suffix}-net"
 }
 
 # 2. Conteneur Flask (Application)
 resource "docker_container" "flask_app" {
-  name  = "${local.project}-${local.env}-app"
-  image = local.app_image
+  name  = "${var.project_name}-app${local.env_suffix}"
+  image = docker_image.app.image_id
 
   networks_advanced {
     name = docker_network.app_net.name
@@ -61,24 +61,29 @@ resource "local_file" "nginx_conf" {
 
 # 5. Conteneur Nginx (Reverse Proxy)
 resource "docker_container" "nginx" {
-  name  = "${local.project}-${local.env}-nginx"
-  image = docker_image.nginx.name
-
-  networks_advanced {
-    name = docker_network.app_net.name
-  }
+  name  = "${var.project_name}-nginx${local.env_suffix}"
+  image = docker_image.nginx.image_id
 
   ports {
     internal = 80
-    external = 8080
+    external = local.nginx_port  # 👈 Port dynamique selon l'environnement
   }
 
-  volumes {
-    host_path      = abspath("${path.module}/generated/nginx.conf")
-    container_path = "/etc/nginx/conf.d/default.conf"
-    read_only      = true
+  networks_advanced {
+    name = docker_network.devops_net.name
   }
 
-  restart    = "unless-stopped"
-  depends_on = [local_file.nginx_conf, docker_container.flask_app]
+  # Configuration Nginx minimale pour test
+  upload {
+    content = <<-EOF
+      server {
+        listen 80;
+        location /health {
+          return 200 '{"status":"ok"}';
+          add_header Content-Type application/json;
+        }
+      }
+    EOF
+    file    = "/etc/nginx/conf.d/default.conf"
+  }
 }
