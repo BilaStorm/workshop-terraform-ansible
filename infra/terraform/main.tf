@@ -7,10 +7,7 @@ terraform {
   }
 }
 
-provider "docker" {
-    host = "npipe:////./pipe/docker_engine"
-
-}
+provider "docker" {}
 
 # Création du réseau (demandé dans les critères)
 resource "docker_network" "private_network" {
