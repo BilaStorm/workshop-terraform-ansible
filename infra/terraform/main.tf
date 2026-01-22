@@ -1,11 +1,9 @@
 # --- 1. Variables Locales & Logique ---
 locals {
   # On récupère le nom de base depuis variables.tf
-  # Assure-toi que 'variable "project_name" {}' existe bien dans variables.tf
   project = var.project_name
   
-  # Gestion intelligente du workspace :
-  # Si on est dans "default", on force "dev". Sinon, on prend le nom (dev, prod).
+  # Gestion intelligente du workspace (dev ou prod)
   env = terraform.workspace == "default" ? "dev" : terraform.workspace
   
   # Nom complet de l'image de ton application
@@ -33,7 +31,10 @@ resource "docker_container" "flask_app" {
 
   ports {
     internal = 5000
-    external = 5000
+    # MODIFICATION ICI : 
+    # Port 5000 pour DEV, Port 5001 pour PROD.
+    # Cela évite le conflit "Address already in use".
+    external = local.env == "prod" ? 5001 : 5000
   }
 
   restart = "unless-stopped"
@@ -77,7 +78,7 @@ resource "docker_container" "nginx" {
 
   ports {
     internal = 80
-    # Logique : Port 80 en prod, 8080 en dev
+    # Logique existante : Port 80 pour PROD, 8080 pour DEV
     external = local.env == "prod" ? 80 : 8080
   }
 
