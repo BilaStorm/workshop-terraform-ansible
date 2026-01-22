@@ -1,3 +1,3 @@
 provider "docker" {
-  host = "unix:///var/run/docker.sock"
+  host = "tcp://localhost:2375"
 }
