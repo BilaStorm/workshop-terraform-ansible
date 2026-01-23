@@ -1,7 +1,22 @@
+terraform {
+  required_providers {
+    docker = {
+      source  = "kreuzwerker/docker"
+      version = "~> 3.0.1"
+    }
+    local = {
+      source  = "hashicorp/local"
+      version = "~> 2.0"
+    }
+  }
+}
+
+provider "docker" {}
+
 # --- 1. Variables Locales & Logique ---
 locals {
-  # On récupère le nom de base depuis variables.tf
-  project = var.project_name
+  # Si tu n'as pas de variables.tf, remplace var.project_name par "devops-local-lab"
+  project = var.project_name 
   
   # Gestion intelligente du workspace (dev ou prod)
   env = terraform.workspace == "default" ? "dev" : terraform.workspace
@@ -9,7 +24,7 @@ locals {
   # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
 
-  # Port SSH pour la VM Ansible (ajouté ici pour être accessible partout)
+  # Port SSH pour la VM Ansible
   ssh_port = 2223
 }
 
@@ -18,10 +33,24 @@ resource "docker_network" "app_net" {
   name = "${local.project}-${local.env}-net"
 }
 
-# --- 3. Conteneur Flask (Application) ---
+# --- 3. Construction de l'image Flask (AJOUT CRUCIAL) ---
+# C'est ce bloc qui empêche l'erreur "pull access denied"
+resource "docker_image" "flask_image_build" {
+  name = local.app_image
+
+  build {
+    context = "${path.module}/../../app"
+    tag     = [local.app_image]
+    no_cache = true
+  }
+}
+
+# --- 4. Conteneur Flask (Application) ---
 resource "docker_container" "flask_app" {
   name  = "${local.project}-${local.env}-app"
-  image = local.app_image
+  
+  # MODIFICATION : On utilise l'ID de l'image construite juste au-dessus
+  image = docker_image.flask_image_build.image_id
 
   networks_advanced {
     name = docker_network.app_net.name
@@ -41,23 +70,27 @@ resource "docker_container" "flask_app" {
   restart = "unless-stopped"
 }
 
-# --- 4. Image Nginx (Reverse Proxy) ---
+# --- 5. Image Nginx (Reverse Proxy) ---
 resource "docker_image" "nginx" {
   name = "nginx:1.27-alpine"
 }
 
-# --- 5. Fichier de Configuration Nginx ---
+# --- 6. Fichier de Configuration Nginx ---
 resource "local_file" "nginx_conf" {
   filename = "${path.module}/generated/nginx.conf"
 
   content = <<-EOT
     server {
       listen 80;
+      server_name localhost;
+
       location / {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # Ici on utilise le nom DNS interne du conteneur Docker
         proxy_pass http://${docker_container.flask_app.name}:5000;
       }
+
       location /health {
         proxy_pass http://${docker_container.flask_app.name}:5000/health;
         access_log off;
@@ -68,7 +101,7 @@ resource "local_file" "nginx_conf" {
   file_permission = "0644"
 }
 
-# --- 6. Conteneur Nginx ---
+# --- 7. Conteneur Nginx ---
 resource "docker_container" "nginx" {
   name  = "${local.project}-${local.env}-nginx"
   image = docker_image.nginx.name
@@ -93,7 +126,7 @@ resource "docker_container" "nginx" {
   depends_on = [local_file.nginx_conf, docker_container.flask_app]
 }
 
-# --- 7. Génération automatique de l'inventory Ansible ---
+# --- 8. Génération automatique de l'inventory Ansible ---
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/../ansible/inventory.ini"
   
