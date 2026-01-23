@@ -1,21 +1,7 @@
-terraform {
-  required_providers {
-    docker = {
-      source  = "kreuzwerker/docker"
-      version = "~> 3.0.1"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.0"
-    }
-  }
-}
-
-provider "docker" {}
-
 # --- 1. Variables Locales & Logique ---
 locals {
-  # Si tu n'as pas de variables.tf, remplace var.project_name par "devops-local-lab"
+  # Si tu as un fichier variables.tf, garde var.project_name.
+  # Sinon, remplace var.project_name par "devops-local-lab"
   project = var.project_name 
   
   # Gestion intelligente du workspace (dev ou prod)
@@ -33,8 +19,8 @@ resource "docker_network" "app_net" {
   name = "${local.project}-${local.env}-net"
 }
 
-# --- 3. Construction de l'image Flask (AJOUT CRUCIAL) ---
-# C'est ce bloc qui empêche l'erreur "pull access denied"
+# --- 3. Construction de l'image Flask (IMPORTANT) ---
+# C'est ce bloc qui construit ton image locale et évite l'erreur "pull access denied"
 resource "docker_image" "flask_image_build" {
   name = local.app_image
 
@@ -49,7 +35,7 @@ resource "docker_image" "flask_image_build" {
 resource "docker_container" "flask_app" {
   name  = "${local.project}-${local.env}-app"
   
-  # MODIFICATION : On utilise l'ID de l'image construite juste au-dessus
+  # On utilise l'ID de l'image construite juste au-dessus
   image = docker_image.flask_image_build.image_id
 
   networks_advanced {
@@ -87,7 +73,7 @@ resource "local_file" "nginx_conf" {
       location / {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        # Ici on utilise le nom DNS interne du conteneur Docker
+        # Utilisation du nom DNS interne Docker
         proxy_pass http://${docker_container.flask_app.name}:5000;
       }
 
