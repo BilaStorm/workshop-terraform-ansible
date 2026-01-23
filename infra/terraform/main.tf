@@ -91,3 +91,27 @@ resource "docker_container" "nginx" {
   restart    = "unless-stopped"
   depends_on = [local_file.nginx_conf, docker_container.flask_app]
 }
+# Génération automatique de l'inventory Ansible
+resource "local_file" "ansible_inventory" {
+  # Chemin relatif : depuis terraform/ vers ansible/inventory.ini
+  filename = "${path.module}/../ansible/inventory.ini"
+  
+  # Contenu du fichier généré
+  content = <<-EOT
+    # Inventory Ansible généré automatiquement par Terraform
+    # Environnement : ${local.env}
+    # Date de génération : ${timestamp()}
+
+    [vm]
+    127.0.0.1 ansible_port=2222 ansible_user=ansible ansible_password=ansible ansible_connection=ssh
+
+    [vm:vars]
+    ansible_python_interpreter=/usr/bin/python3
+    ansible_become=yes
+    ansible_become_method=sudo
+    ansible_become_pass=ansible
+  EOT
+  
+  # Permissions du fichier (rw-r--r--)
+  file_permission = "0644"
+}
