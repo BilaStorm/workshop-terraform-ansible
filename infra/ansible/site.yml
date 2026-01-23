@@ -1,0 +1,12 @@
+---
+# Playbook principal : Configuration complète de la VM
+
+- name: Configure VM and deploy application
+  hosts: vm
+  become: yes
+  gather_facts: yes
+  
+  roles:
+    - bootstrap
+    - docker
+    - app

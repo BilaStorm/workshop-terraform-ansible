@@ -1,0 +1,28 @@
+---
+# Rôle : app
+# Objectif : Déployer l'application Flask avec Docker Compose
+
+- name: Create application directory
+  ansible.builtin.file:
+    path: /opt/devops-lab-app
+    state: directory
+    mode: '0755'
+    owner: ansible
+    group: ansible
+  tags: app
+
+- name: Deploy docker-compose.yml from template
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: /opt/devops-lab-app/docker-compose.yml
+    mode: '0644'
+    owner: ansible
+    group: ansible
+  tags: app
+  notify: Restart app containers
+
+- name: Start application with Docker Compose
+  community.docker.docker_compose:
+    project_src: /opt/devops-lab-app
+    state: present
+  tags: app

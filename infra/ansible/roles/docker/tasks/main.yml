@@ -1,0 +1,62 @@
+---
+# Rôle : docker
+# Objectif : Installer Docker et Docker Compose
+
+- name: Install Docker dependencies
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - gnupg
+      - lsb-release
+    state: present
+  tags: docker
+
+- name: Create directory for Docker GPG key
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
+  tags: docker
+
+- name: Add Docker GPG key
+  ansible.builtin.apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+  tags: docker
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+  tags: docker
+
+- name: Install Docker
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+    update_cache: yes
+  tags: docker
+
+- name: Install Docker Compose via pip
+  ansible.builtin.pip:
+    name: docker-compose
+    state: present
+  tags: docker
+
+- name: Ensure Docker service is started and enabled
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: yes
+  tags: docker
+
+- name: Add ansible user to docker group
+  ansible.builtin.user:
+    name: ansible
+    groups: docker
+    append: yes
+  tags: docker

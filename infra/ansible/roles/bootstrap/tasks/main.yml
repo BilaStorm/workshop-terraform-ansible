@@ -1,0 +1,19 @@
+---
+# Rôle : bootstrap
+# Objectif : Préparer la machine avec les packages essentiels
+
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+  tags: bootstrap
+
+- name: Install basic packages
+  ansible.builtin.apt:
+    name:
+      - curl
+      - git
+      - python3-pip
+      - vim
+    state: present
+  tags: bootstrap
