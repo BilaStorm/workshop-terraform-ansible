@@ -2,7 +2,7 @@
 # Handlers : Actions déclenchées par notify
 
 - name: Restart app containers
-  community.docker.docker_compose:
+  community.docker.docker_compose_v2:  
     project_src: /opt/devops-lab-app
     state: restarted
   listen: "Restart app containers"
