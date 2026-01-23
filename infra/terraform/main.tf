@@ -122,7 +122,6 @@ resource "local_file" "ansible_inventory" {
     127.0.0.1 ansible_port=${local.ssh_port} ansible_user=ansible ansible_password=ansible ansible_connection=ssh
 
     [vm:vars]
-    ansible_python_interpreter=/usr/bin/python3
     ansible_become=yes
     ansible_become_method=sudo
     ansible_become_pass=ansible
