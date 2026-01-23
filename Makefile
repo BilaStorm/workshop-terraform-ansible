@@ -80,6 +80,12 @@ validate: ## Valide la configuration (Terraform + Ansible)
 	cd $(ANSIBLE_DIR) && ansible-playbook --syntax-check site.yml
 	@echo "$(GREEN)✅ Validation passed$(NC)"
 
-logs: ## Affiche les logs de l'application
-	@docker logs -f devops-local-lab-app-dev 2>/dev/null || \
-		echo "$(RED)Container not found. Try: make status$(NC)"
+# --- Logs de l'Application (Container Docker) ---
+logs:
+	@echo "🔍 Affichage des logs de l'application Flask (Docker)..."
+	docker logs -f devops_lab_flask_app
+
+# --- Logs de Nginx (Service Système) ---
+logs-nginx:
+	@echo "🔍 Affichage des logs Nginx (Access + Error)..."
+	sudo tail -f /var/log/nginx/flask_access.log /var/log/nginx/flask_error.log
