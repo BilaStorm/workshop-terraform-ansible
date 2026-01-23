@@ -44,9 +44,8 @@ resource "docker_container" "flask_app" {
 
   ports {
     internal = 5000
-    # On met 5001 ici pour laisser le port 5000 libre si besoin
-    # Et surtout pour que Nginx (Ansible) puisse taper dessus
-    external = 5001
+    # CORRECTION : On met 5000 ici pour s'aligner avec ta config Ansible
+    external = 5000 
   }
 
   restart = "unless-stopped"
@@ -83,7 +82,7 @@ resource "local_file" "nginx_conf" {
 
 # --- 7. Conteneur Nginx (Docker) ---
 # ⚠️ MIS EN COMMENTAIRE POUR ÉVITER LE CONFLIT AVEC ANSIBLE
-# Si on laisse ça, le port 80 sera pris et Ansible ne pourra pas installer son Nginx.
+# Le port 80 doit rester libre pour l'exercice Ansible
 # resource "docker_container" "nginx" {
 #   name  = "${local.project}-${local.env}-nginx"
 #   image = docker_image.nginx.name
@@ -94,7 +93,7 @@ resource "local_file" "nginx_conf" {
 #
 #   ports {
 #     internal = 80
-#     external = 8080 # On décale sur 8080 pour ne pas gêner Ansible sur le 80
+#     external = 8080 
 #   }
 #
 #   volumes {
