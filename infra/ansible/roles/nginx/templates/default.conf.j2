@@ -1,0 +1,42 @@
+# Configuration Nginx pour reverse proxy Flask
+# Généré automatiquement par Ansible
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    
+    server_name _;
+
+    # Logs
+    access_log /var/log/nginx/flask_access.log;
+    error_log /var/log/nginx/flask_error.log;
+
+    # Reverse proxy vers l'application Flask
+    location / {
+        proxy_pass http://flask_app:5000;
+        proxy_http_version 1.1;
+        
+        # Headers pour préserver les informations client
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Health check endpoint (sans logs)
+    location /health {
+        proxy_pass http://flask_app:5000/health;
+        access_log off;
+    }
+
+    # Gestion des erreurs
+    error_page 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+    }
+}

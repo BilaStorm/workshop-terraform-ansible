@@ -1,0 +1,14 @@
+---
+# Handlers : Actions déclenchées par notify
+
+- name: Reload Nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: reloaded
+  listen: "Reload Nginx"
+
+- name: Restart Nginx
+  ansible.builtin.systemd:
+    name: nginx
+    state: restarted
+  listen: "Restart Nginx"

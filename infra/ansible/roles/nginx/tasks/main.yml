@@ -1,0 +1,31 @@
+---
+# Rôle : nginx
+# Objectif : Installer et configurer Nginx comme reverse proxy
+
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: yes
+  tags: nginx
+
+- name: Ensure Nginx is started and enabled
+  ansible.builtin.systemd:
+    name: nginx
+    state: started
+    enabled: yes
+  tags: nginx
+
+- name: Deploy Nginx configuration for Flask app
+  ansible.builtin.template:
+    src: default.conf.j2
+    dest: /etc/nginx/sites-available/default
+    mode: '0644'
+  tags: nginx
+  notify: Reload Nginx
+
+- name: Remove default Nginx welcome page
+  ansible.builtin.file:
+    path: /var/www/html/index.nginx-debian.html
+    state: absent
+  tags: nginx
