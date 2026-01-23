@@ -8,6 +8,9 @@ locals {
   
   # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
+
+  # Port SSH pour la VM Ansible (ajouté ici pour être accessible partout)
+  ssh_port = 2223
 }
 
 # --- 2. Réseau Docker ---
@@ -31,9 +34,7 @@ resource "docker_container" "flask_app" {
 
   ports {
     internal = 5000
-    # MODIFICATION ICI : 
-    # Port 5000 pour DEV, Port 5001 pour PROD.
-    # Cela évite le conflit "Address already in use".
+    # Port 5000 pour DEV, Port 5001 pour PROD
     external = local.env == "prod" ? 5001 : 5000
   }
 
@@ -78,7 +79,7 @@ resource "docker_container" "nginx" {
 
   ports {
     internal = 80
-    # Logique existante : Port 80 pour PROD, 8080 pour DEV
+    # Port 80 pour PROD, 8080 pour DEV
     external = local.env == "prod" ? 80 : 8080
   }
 
@@ -91,7 +92,8 @@ resource "docker_container" "nginx" {
   restart    = "unless-stopped"
   depends_on = [local_file.nginx_conf, docker_container.flask_app]
 }
-# Génération automatique de l'inventory Ansible
+
+# --- 7. Génération automatique de l'inventory Ansible ---
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/../ansible/inventory.ini"
   
@@ -110,19 +112,4 @@ resource "local_file" "ansible_inventory" {
   EOT
   
   file_permission = "0644"
-}
-locals {
-  env = terraform.workspace
-
-  ports = {
-    default = 8080
-    dev     = 8080
-    prod    = 80
-  }
-
-  nginx_port = local.ports[local.env]
-  env_suffix = local.env == "default" ? "" : "-${local.env}"
-  
-  # 👇 NOUVEAU : Port SSH dynamique
-  ssh_port = 2223
 }
