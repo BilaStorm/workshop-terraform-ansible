@@ -10,3 +10,4 @@
     - bootstrap
     - docker
     - app
+    - nginx  # 👈 AJOUT du rôle nginx
