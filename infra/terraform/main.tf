@@ -1,27 +1,16 @@
 # --- 1. Variables Locales & Logique ---
 locals {
+  # On récupère le nom de base depuis variables.tf
   project = var.project_name
   
-  # Récupère le nom du workspace (dev ou prod)
-  # Si on est dans "default", on bascule sur "dev"
+  # Gestion intelligente du workspace (dev ou prod)
   env = terraform.workspace == "default" ? "dev" : terraform.workspace
   
+  # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
-  ssh_port  = 2223
 
-  # --- CONFIGURATION DES PORTS NGINX ---
-  # Ici on définit quel workspace écoute sur quel port externe
-  nginx_ports = {
-    "dev"  = 8080
-    "prod" = 80   # C'est ici qu'on force le port 80 pour la prod
-  }
-
-  # --- CONFIGURATION DES PORTS FLASK ---
-  # On décale les ports de l'app pour éviter les conflits
-  flask_ports = {
-    "dev"  = 5000
-    "prod" = 5001
-  }
+  # Port SSH pour la VM Ansible (ajouté ici pour être accessible partout)
+  ssh_port = 2223
 }
 
 # --- 2. Réseau Docker ---
@@ -45,8 +34,8 @@ resource "docker_container" "flask_app" {
 
   ports {
     internal = 5000
-    # On regarde dans la liste flask_ports. Si pas trouvé, par défaut 5000.
-    external = lookup(local.flask_ports, local.env, 5000)
+    # Port 5000 pour DEV, Port 5001 pour PROD
+    external = local.env == "prod" ? 5001 : 5000
   }
 
   restart = "unless-stopped"
@@ -54,8 +43,7 @@ resource "docker_container" "flask_app" {
 
 # --- 4. Image Nginx (Reverse Proxy) ---
 resource "docker_image" "nginx" {
-  name         = "nginx:1.27-alpine"
-  keep_locally = true
+  name = "nginx:1.27-alpine"
 }
 
 # --- 5. Fichier de Configuration Nginx ---
@@ -91,10 +79,8 @@ resource "docker_container" "nginx" {
 
   ports {
     internal = 80
-    # ICI C'EST LA MAGIE :
-    # Si env = "prod", ça prend 80.
-    # Si env = "dev", ça prend 8080.
-    external = lookup(local.nginx_ports, local.env, 8080)
+    # Port 80 pour PROD, 8080 pour DEV
+    external = local.env == "prod" ? 80 : 8080
   }
 
   volumes {
