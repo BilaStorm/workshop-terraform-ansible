@@ -16,6 +16,7 @@ resource "docker_network" "app_net" {
 }
 
 # --- 3. Construction de l'image Flask ---
+# Terraform construit l'image pour qu'elle soit prête pour Ansible
 resource "docker_image" "flask_image_build" {
   name = local.app_image
 
@@ -27,75 +28,65 @@ resource "docker_image" "flask_image_build" {
 }
 
 # --- 4. Conteneur Flask (Application) ---
-resource "docker_container" "flask_app" {
-  name = "${local.project}-${local.env}-app"
-
-  # On utilise l'ID de l'image construite juste au-dessus
-  image = docker_image.flask_image_build.image_id
-
-  networks_advanced {
-    name = docker_network.app_net.name
-  }
-
-  env = [
-    "APP_ENV=${local.env}",
-    "PORT=5000"
-  ]
-
-  ports {
-    internal = 5000
-    # CORRECTION : On met 5000 ici pour s'aligner avec ta config Ansible
-    external = 5000
-  }
-
-  restart = "unless-stopped"
-}
+# ⚠️ MIS EN COMMENTAIRE : C'est maintenant ANSIBLE qui lance ce conteneur.
+# Cela évite le conflit de port 5000 lors du "make deploy".
+# resource "docker_container" "flask_app" {
+#   name = "${local.project}-${local.env}-app"
+#   image = docker_image.flask_image_build.image_id
+#   networks_advanced {
+#     name = docker_network.app_net.name
+#   }
+#   env = [
+#     "APP_ENV=${local.env}",
+#     "PORT=5000"
+#   ]
+#   ports {
+#     internal = 5000
+#     external = 5000
+#   }
+#   restart = "unless-stopped"
+# }
 
 # --- 5. Image Nginx (Docker) ---
-# (Optionnel si tu le fais avec Ansible, mais on le garde pour l'image)
 resource "docker_image" "nginx" {
   name = "nginx:1.27-alpine"
 }
 
 # --- 6. Fichier de Configuration Nginx (Pour Docker uniquement) ---
-resource "local_file" "nginx_conf" {
-  filename = "${path.module}/generated/nginx.conf"
-
-  content         = <<-EOT
-    server {
-      listen 80;
-      server_name localhost;
-
-      location / {
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://${docker_container.flask_app.name}:5000;
-      }
-      location /health {
-        proxy_pass http://${docker_container.flask_app.name}:5000/health;
-        access_log off;
-      }
-    }
-  EOT
-  file_permission = "0644"
-}
+# ⚠️ MIS EN COMMENTAIRE car il dépend du conteneur flask_app ci-dessus.
+# Ansible génère sa propre configuration via son template Jinja2.
+# resource "local_file" "nginx_conf" {
+#   filename = "${path.module}/generated/nginx.conf"
+#   content          = <<-EOT
+#     server {
+#       listen 80;
+#       server_name localhost;
+#       location / {
+#         proxy_set_header Host $host;
+#         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+#         proxy_pass http://${docker_container.flask_app.name}:5000;
+#       }
+#       location /health {
+#         proxy_pass http://${docker_container.flask_app.name}:5000/health;
+#         access_log off;
+#       }
+#     }
+#   EOT
+#   file_permission = "0644"
+# }
 
 # --- 7. Conteneur Nginx (Docker) ---
-# ⚠️ MIS EN COMMENTAIRE POUR ÉVITER LE CONFLIT AVEC ANSIBLE
-# Le port 80 doit rester libre pour l'exercice Ansible
+# ⚠️ MIS EN COMMENTAIRE : Ansible gère Nginx.
 # resource "docker_container" "nginx" {
 #   name  = "${local.project}-${local.env}-nginx"
 #   image = docker_image.nginx.name
-#
 #   networks_advanced {
 #     name = docker_network.app_net.name
 #   }
-#
 #   ports {
 #     internal = 80
 #     external = 8080 
 #   }
-#
 #   volumes {
 #     host_path      = abspath(local_file.nginx_conf.filename)
 #     container_path = "/etc/nginx/conf.d/default.conf"
