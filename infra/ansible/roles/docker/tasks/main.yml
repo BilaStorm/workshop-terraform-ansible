@@ -9,6 +9,8 @@
       - ca-certificates
       - gnupg
       - lsb-release
+      - python3-pip
+      - python3-setuptools
     state: present
   tags: docker
 
@@ -31,21 +33,24 @@
     state: present
   tags: docker
 
-- name: Install Docker
+- name: Install Docker and Compose Plugin
   ansible.builtin.apt:
     name:
       - docker-ce
       - docker-ce-cli
       - containerd.io
+      - docker-compose-plugin  # <--- On installe la version moderne (V2) ici via APT
     state: present
     update_cache: yes
   tags: docker
 
-- name: Install Docker Compose via pip
+- name: Install Docker SDK for Python
   ansible.builtin.pip:
-    name: docker-compose
+    name: 
+      - docker      # <--- Ansible a besoin de ça pour piloter les conteneurs
+      - requests
     state: present
-    extra_args: "--break-system-packages" # <--- LA CORRECTION EST ICI
+    extra_args: "--break-system-packages" # <--- Obligatoire sur Ubuntu 24.04/WSL
   tags: docker
 
 - name: Ensure Docker service is started and enabled
