@@ -45,6 +45,7 @@
   ansible.builtin.pip:
     name: docker-compose
     state: present
+    extra_args: "--break-system-packages" # <--- LA CORRECTION EST ICI
   tags: docker
 
 - name: Ensure Docker service is started and enabled
