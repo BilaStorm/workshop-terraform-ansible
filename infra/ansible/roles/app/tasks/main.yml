@@ -22,7 +22,7 @@
   notify: Restart app containers
 
 - name: Start application with Docker Compose
-  community.docker.docker_compose:
+  community.docker.docker_compose_v2:   
     project_src: /opt/devops-lab-app
     state: present
   tags: app
