@@ -1,7 +1,6 @@
 # --- 1. Variables Locales & Logique ---
 locals {
   # Si tu as un fichier variables.tf, garde var.project_name.
-  # Sinon, remplace var.project_name par "devops-local-lab"
   project = var.project_name 
   
   # Gestion intelligente du workspace (dev ou prod)
@@ -9,7 +8,6 @@ locals {
   
   # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
-
 }
 
 # --- 2. Réseau Docker ---
@@ -17,8 +15,7 @@ resource "docker_network" "app_net" {
   name = "${local.project}-${local.env}-net"
 }
 
-# --- 3. Construction de l'image Flask (IMPORTANT) ---
-# C'est ce bloc qui construit ton image locale et évite l'erreur "pull access denied"
+# --- 3. Construction de l'image Flask ---
 resource "docker_image" "flask_image_build" {
   name = local.app_image
 
@@ -47,19 +44,21 @@ resource "docker_container" "flask_app" {
 
   ports {
     internal = 5000
-    # Port 5000 pour DEV, Port 5001 pour PROD
-    external = local.env == "prod" ? 5001 : 5000
+    # On met 5001 ici pour laisser le port 5000 libre si besoin
+    # Et surtout pour que Nginx (Ansible) puisse taper dessus
+    external = 5001
   }
 
   restart = "unless-stopped"
 }
 
-# --- 5. Image Nginx (Reverse Proxy) ---
+# --- 5. Image Nginx (Docker) ---
+# (Optionnel si tu le fais avec Ansible, mais on le garde pour l'image)
 resource "docker_image" "nginx" {
   name = "nginx:1.27-alpine"
 }
 
-# --- 6. Fichier de Configuration Nginx ---
+# --- 6. Fichier de Configuration Nginx (Pour Docker uniquement) ---
 resource "local_file" "nginx_conf" {
   filename = "${path.module}/generated/nginx.conf"
 
@@ -71,60 +70,52 @@ resource "local_file" "nginx_conf" {
       location / {
         proxy_set_header Host $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        # Utilisation du nom DNS interne Docker
         proxy_pass http://${docker_container.flask_app.name}:5000;
       }
-
       location /health {
         proxy_pass http://${docker_container.flask_app.name}:5000/health;
         access_log off;
       }
     }
   EOT
-
   file_permission = "0644"
 }
 
-# --- 7. Conteneur Nginx ---
-resource "docker_container" "nginx" {
-  name  = "${local.project}-${local.env}-nginx"
-  image = docker_image.nginx.name
+# --- 7. Conteneur Nginx (Docker) ---
+# ⚠️ MIS EN COMMENTAIRE POUR ÉVITER LE CONFLIT AVEC ANSIBLE
+# Si on laisse ça, le port 80 sera pris et Ansible ne pourra pas installer son Nginx.
+# resource "docker_container" "nginx" {
+#   name  = "${local.project}-${local.env}-nginx"
+#   image = docker_image.nginx.name
+#
+#   networks_advanced {
+#     name = docker_network.app_net.name
+#   }
+#
+#   ports {
+#     internal = 80
+#     external = 8080 # On décale sur 8080 pour ne pas gêner Ansible sur le 80
+#   }
+#
+#   volumes {
+#     host_path      = abspath(local_file.nginx_conf.filename)
+#     container_path = "/etc/nginx/conf.d/default.conf"
+#     read_only      = true
+#   }
+#   restart    = "unless-stopped"
+#   depends_on = [local_file.nginx_conf, docker_container.flask_app]
+# }
 
-  networks_advanced {
-    name = docker_network.app_net.name
-  }
-
-  ports {
-    internal = 80
-    # Port 80 pour PROD, 8080 pour DEV
-    external = local.env == "prod" ? 80 : 8080
-  }
-
-  volumes {
-    host_path      = abspath(local_file.nginx_conf.filename)
-    container_path = "/etc/nginx/conf.d/default.conf"
-    read_only      = true
-  }
-
-  restart    = "unless-stopped"
-  depends_on = [local_file.nginx_conf, docker_container.flask_app]
-}
-
-# --- 8. Génération automatique de l'inventory Ansible ---
+# --- 8. Génération automatique de l'inventory Ansible (SANS SSH) ---
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/../ansible/inventory.ini"
   
   content = <<-EOT
     # Inventory Ansible généré automatiquement par Terraform
-    # Environnement : ${local.env}
+    # Mode : LOCAL (Pas de SSH)
 
     [vm]
-    127.0.0.1 ansible_port=${local.ssh_port} ansible_user=ansible ansible_password=ansible ansible_connection=ssh
-
-    [vm:vars]
-    ansible_become=yes
-    ansible_become_method=sudo
-    ansible_become_pass=ansible
+    localhost ansible_connection=local
   EOT
   
   file_permission = "0644"
