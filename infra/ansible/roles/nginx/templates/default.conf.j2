@@ -14,7 +14,7 @@ server {
     # Reverse proxy vers l'application Flask
     location / {
         # CORRECTION ICI : On utilise 127.0.0.1 et le port 5001 (celui vu dans docker ps)
-        proxy_pass http://127.0.0.1:5001;
+        proxy_pass http://127.0.0.1:5000;
         proxy_http_version 1.1;
         
         # Headers pour préserver les informations client
@@ -32,7 +32,7 @@ server {
     # Health check endpoint (sans logs)
     location /health {
         # CORRECTION ICI AUSSI
-        proxy_pass http://127.0.0.1:5001/health;
+        proxy_pass http://127.0.0.1:5000/health;
         access_log off;
     }
 
