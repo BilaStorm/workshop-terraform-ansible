@@ -1,11 +1,11 @@
 # --- 1. Variables Locales & Logique ---
 locals {
   # Si tu as un fichier variables.tf, garde var.project_name.
-  project = var.project_name 
-  
+  project = var.project_name
+
   # Gestion intelligente du workspace (dev ou prod)
   env = terraform.workspace == "default" ? "dev" : terraform.workspace
-  
+
   # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
 }
@@ -20,16 +20,16 @@ resource "docker_image" "flask_image_build" {
   name = local.app_image
 
   build {
-    context = "${path.module}/../../app"
-    tag     = [local.app_image]
+    context  = "${path.module}/../../app"
+    tag      = [local.app_image]
     no_cache = true
   }
 }
 
 # --- 4. Conteneur Flask (Application) ---
 resource "docker_container" "flask_app" {
-  name  = "${local.project}-${local.env}-app"
-  
+  name = "${local.project}-${local.env}-app"
+
   # On utilise l'ID de l'image construite juste au-dessus
   image = docker_image.flask_image_build.image_id
 
@@ -45,7 +45,7 @@ resource "docker_container" "flask_app" {
   ports {
     internal = 5000
     # CORRECTION : On met 5000 ici pour s'aligner avec ta config Ansible
-    external = 5000 
+    external = 5000
   }
 
   restart = "unless-stopped"
@@ -61,7 +61,7 @@ resource "docker_image" "nginx" {
 resource "local_file" "nginx_conf" {
   filename = "${path.module}/generated/nginx.conf"
 
-  content = <<-EOT
+  content         = <<-EOT
     server {
       listen 80;
       server_name localhost;
@@ -108,7 +108,7 @@ resource "local_file" "nginx_conf" {
 # --- 8. Génération automatique de l'inventory Ansible (SANS SSH) ---
 resource "local_file" "ansible_inventory" {
   filename = "${path.module}/../ansible/inventory.ini"
-  
+
   content = <<-EOT
     # Inventory Ansible généré automatiquement par Terraform
     # Mode : LOCAL (Pas de SSH)
@@ -116,6 +116,6 @@ resource "local_file" "ansible_inventory" {
     [vm]
     localhost ansible_connection=local
   EOT
-  
+
   file_permission = "0644"
 }
