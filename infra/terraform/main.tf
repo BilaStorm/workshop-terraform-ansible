@@ -10,8 +10,6 @@ locals {
   # Nom complet de l'image de ton application
   app_image = "${local.project}-flask:latest"
 
-  # Port SSH pour la VM Ansible
-  ssh_port = 2223
 }
 
 # --- 2. Réseau Docker ---
